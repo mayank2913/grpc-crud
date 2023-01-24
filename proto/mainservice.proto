@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package usermgmt;
+option go_package = "test.com/go-usermgmt-grpc;go_usermgmt_grpc";
+
+message User {
+  int32 id = 1;
+  string title = 2;
+  string description = 3;
+}
+
+message UserId {
+  int32 id = 1;
+}
+
+message CreateUserReq {
+    User user = 1;
+}
+
+message CreateUserRes {
+    User user = 1;
+}
+
+message ReadUserReq {
+    string id = 1;
+}
+
+message ReadUserRes {
+    User user = 1;
+}
+
+
+message UpdateUserReq {
+    User blog = 1;
+}
+
+message UpdateUserRes {
+    User blog = 1;
+}
+
+message DeleteUserReq {
+    string id = 1;
+}
+
+message DeleteUserRes {
+    bool success = 1;
+}
+
+service UserService {
+    rpc CreateUser (CreateUserReq) returns (CreateUserRes) {}
+    rpc ReadUser (ReadUserReq) returns (ReadUserRes) {}
+    rpc UpdateUser (UpdateUserReq) returns (UpdateUserRes) {}
+    rpc DeleteUser (DeleteUserReq) returns (DeleteUserRes) {}
+  }
