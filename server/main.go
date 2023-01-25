@@ -24,7 +24,7 @@ func (s *UserServiceServer) CreateUser(ctx context.Context, req *userpb.CreateUs
 
 	user := req.GetUser()
 	data := userItem{
-		UserID: user.GetAuthorId(),
+		UserID: user.GetId(),
 	}
 
 	result, err := userdb.InsertOne(mongoCtx, data)
@@ -77,9 +77,7 @@ func (s *UserServiceServer) UpdateUser(ctx context.Context, req *userpb.UpdateUs
 	}
 
 	update := bson.M{
-		"authord_id": user.GetAuthorId(),
-		"title":      user.GetTitle(),
-		"content":    user.GetContent(),
+		"id": user.GetId(),
 	}
 
 	filter := bson.M{"_id": oid}
@@ -152,7 +150,7 @@ func (s *UserServiceServer) ListUsers(req *userpb.ListUsersReq, stream userpb.Us
 
 type userItem struct {
 	ID     primitive.ObjectID `bson:"_id,omitempty"`
-	UserID string             `bson:"author_id"`
+	UserID string             `bson:"id"`
 }
 
 var db *mongo.Client
