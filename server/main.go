@@ -7,7 +7,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
-
+	userpb "../proto"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -39,7 +39,7 @@ func (s *UserServiceServer) CreateUser(ctx context.Context, req *userpb.CreateUs
 	oid := result.InsertedID.(primitive.ObjectID)
 	user.Id = oid.Hex()
 
-	return &userpb.CreateBlogRes{User: user}, nil
+	return &userpb.CreateUserRes{User: user}, nil
 }
 
 func (s *UserServiceServer) ReadUser(ctx context.Context, req *userpb.ReadUserReq) (*userpb.ReadUserRes, error) {
@@ -56,30 +56,30 @@ func (s *UserServiceServer) ReadUser(ctx context.Context, req *userpb.ReadUserRe
 		return nil, status.Errorf(codes.NotFound, fmt.Sprintf("Could not find user with Object Id %s: %v", req.GetId(), err))
 	}
 
-	response := &userpb.ReadBlogRes{
-		Blog: &userpb.Blog{
+	response := &userpb.ReadUserRes{
+		User: &userpb.User{
 			Id: oid.Hex(),
 		},
 	}
 	return response, nil
 }
 
-func (s *UserServiceServer) UpdateUser(ctx context.Context, req *userpb.UpdateBlogReq) (*userpb.UpdateBlogRes, error) {
+func (s *UserServiceServer) UpdateUser(ctx context.Context, req *userpb.UpdateUserReq) (*userpb.UpdateUserRes, error) {
 
-	blog := req.GetBlog()
+	user := req.GetUser()
 
-	oid, err := primitive.ObjectIDFromHex(blog.GetId())
+	oid, err := primitive.ObjectIDFromHex(user.GetId())
 	if err != nil {
 		return nil, status.Errorf(
 			codes.InvalidArgument,
-			fmt.Sprintf("Could not convert the supplied blog id to a MongoDB ObjectId: %v", err),
+			fmt.Sprintf("Could not convert the supplied user id to a MongoDB ObjectId: %v", err),
 		)
 	}
 
 	update := bson.M{
-		"authord_id": blog.GetAuthorId(),
-		"title":      blog.GetTitle(),
-		"content":    blog.GetContent(),
+		"authord_id": user.GetAuthorId(),
+		"title":      user.GetTitle(),
+		"content":    user.GetContent(),
 	}
 
 	filter := bson.M{"_id": oid}
@@ -91,18 +91,18 @@ func (s *UserServiceServer) UpdateUser(ctx context.Context, req *userpb.UpdateBl
 	if err != nil {
 		return nil, status.Errorf(
 			codes.NotFound,
-			fmt.Sprintf("Could not find blog with supplied ID: %v", err),
+			fmt.Sprintf("Could not find user with supplied ID: %v", err),
 		)
 	}
-	return &userpb.UpdateBlogRes{
-		Blog: &userpb.Blog{
+	return &userpb.UpdateUserRes{
+		User: &userpb.User{
 			Id:     decoded.ID.Hex(),
 			UserId: decoded.UserID,
 		},
 	}, nil
 }
 
-func (s *UserServiceServer) DeleteUser(ctx context.Context, req *userpb.DeleteBlogReq) (*userpb.DeleteBlogRes, error) {
+func (s *UserServiceServer) DeleteUser(ctx context.Context, req *userpb.DeleteUserReq) (*userpb.DeleteUserRes, error) {
 	oid, err := primitive.ObjectIDFromHex(req.GetId())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Could not convert to ObjectId: %v", err))
@@ -110,14 +110,14 @@ func (s *UserServiceServer) DeleteUser(ctx context.Context, req *userpb.DeleteBl
 
 	_, err = userdb.DeleteOne(ctx, bson.M{"_id": oid})
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, fmt.Sprintf("Could not find/delete blog with id %s: %v", req.GetId(), err))
+		return nil, status.Errorf(codes.NotFound, fmt.Sprintf("Could not find/delete user with id %s: %v", req.GetId(), err))
 	}
-	return &userpb.DeleteBlogRes{
+	return &userpb.DeleteUserRes{
 		Success: true,
 	}, nil
 }
 
-func (s *UserServiceServer) ListBlogs(req *userpb.ListBlogsReq, stream userpb.BlogService_ListBlogsServer) error {
+func (s *UserServiceServer) ListUsers(req *userpb.ListUsersReq, stream userpb.UserService_ListUsersServer) error {
 
 	data := &userItem{}
 
@@ -136,8 +136,8 @@ func (s *UserServiceServer) ListBlogs(req *userpb.ListBlogsReq, stream userpb.Bl
 			return status.Errorf(codes.Unavailable, fmt.Sprintf("Could not decode data: %v", err))
 		}
 
-		stream.Send(&userpb.ListBlogsRes{
-			Blog: &userpb.Blog{
+		stream.Send(&userpb.ListUsersRes{
+			User: &userpb.User{
 				Id:     data.ID.Hex(),
 				UserId: data.UserID,
 			},
@@ -170,11 +170,8 @@ func main() {
 	}
 
 	opts := []grpc.ServerOption{}
-
 	s := grpc.NewServer(opts...)
-
 	srv := &UserServiceServer{}
-
 	userpb.RegisterUserServiceServer(s, srv)
 
 	fmt.Println("Connecting to MongoDB...")
@@ -185,12 +182,12 @@ func main() {
 	}
 	err = db.Ping(mongoCtx, nil)
 	if err != nil {
-		log.Fatalf("Could not connect to MongoDB: %v\n", err)
+		log.Fatalf("Couldn't connect to MongoDB: %v\n", err)
 	} else {
 		fmt.Println("Connected to Mongodb")
 	}
 
-	userdb = db.Database("mydb").Collection("blog")
+	userdb = db.Database("mydb").Collection("user")
 
 	go func() {
 		if err := s.Serve(listener); err != nil {
@@ -208,7 +205,6 @@ func main() {
 	fmt.Println("\nStopping the server...")
 	s.Stop()
 	listener.Close()
-	fmt.Println("Closing MongoDB connection")
+	fmt.Println("Closing mongo connection")
 	db.Disconnect(mongoCtx)
-	fmt.Println("Done.")
 }

@@ -31,11 +31,11 @@ message ReadUserRes {
 
 
 message UpdateUserReq {
-    User blog = 1;
+    User user = 1;
 }
 
 message UpdateUserRes {
-    User blog = 1;
+    User user = 1;
 }
 
 message DeleteUserReq {
